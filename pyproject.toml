@@ -1,0 +1,30 @@
+[project]
+name = "maumi"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.18.4",
+    "asyncpg>=0.31.0",
+    "bcrypt>=5.0.0",
+    "fastapi>=0.136.0",
+    "gunicorn>=25.3.0",
+    "langchain>=1.2.15",
+    "langchain-openai>=1.1.16",
+    "langgraph>=1.1.8",
+    "langgraph-checkpoint-postgres>=3.0.5",
+    "loguru>=0.7.3",
+    "openai>=2.32.0",
+    "psycopg-pool>=3.3.0",
+    "psycopg2-binary>=2.9.11",
+    "psycopg[binary]>=3.3.3",
+    "pydantic-settings>=2.13.1",
+    "pydantic[email]>=2.13.2",
+    "pyjwt>=2.12.1",
+    "python-multipart>=0.0.26",
+    "redis>=7.4.0",
+    "sqlalchemy[asyncio]>=2.0.49",
+    "uuid7>=0.1.0",
+    "uvicorn>=0.44.0",
+]

@@ -3,7 +3,7 @@ from pydantic import SecretStr, model_validator, field_validator
 from typing import Union
 from urllib.parse import quote_plus
 
-from app.core.logger import logger
+# from app.core.logger import logger
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -80,5 +80,5 @@ class Settings(BaseSettings):
 try:
     config = Settings()
 except Exception as e:
-    logger.error(f"설정 로드 중 오류 발생: {e}")
+    # logger.error(f"설정 로드 중 오류 발생: {e}")
     exit(1)

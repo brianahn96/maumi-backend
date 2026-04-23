@@ -28,6 +28,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
+REDIS_DB = 1 if config.ENVIRONMENT == "production" else 0
+
 # OAuth2 Configuration
 # GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID.get_secret_value()
 # GOOGLE_CLIENT_SECRET = config.GOOGLE_CLIENT_SECRET.get_secret_value()
@@ -118,7 +120,7 @@ async def check_rate_limit(username: str, redis: redis.Redis) -> bool:
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-    redis: redis.Redis = Depends(get_redis_manager(RedisDB.AUTH))
+    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -207,7 +209,7 @@ async def me(
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
-    redis: redis.Redis = Depends(get_redis_manager(RedisDB.AUTH))
+    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
 ):
 
     result = await db.execute(
@@ -281,7 +283,7 @@ async def login(
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh_token(
     refresh_token: str = Cookie(None),
-    redis: redis.Redis = Depends(get_redis_manager(RedisDB.AUTH)),
+    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB)),
 ):
     if not refresh_token:
         raise HTTPException(
@@ -378,7 +380,7 @@ async def refresh_token(
 async def logout(
     token: str = Depends(oauth2_scheme),
     user: User = Depends(get_current_user),
-    redis: redis.Redis = Depends(get_redis_manager(RedisDB.AUTH)),
+    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB)),
 ):
     # Get the token payload to extract jti for blacklisting
     try:
@@ -551,7 +553,7 @@ async def logout(
 #     state: str,
 #     request: Request,
 #     db: AsyncSession = Depends(get_db),
-#     redis: redis.Redis = Depends(get_redis_manager(RedisDB.AUTH))
+#     redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
 # ):
 #     """Handle Naver OAuth callback"""
 #     # Reconstruct the callback URL properly
@@ -622,7 +624,7 @@ async def logout(
 #     code: str,
 #     request: Request,
 #     db: AsyncSession = Depends(get_db),
-#     redis: redis.Redis = Depends(get_redis_manager(RedisDB.AUTH))
+#     redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
 # ):
 #     """Handle Google OAuth callback"""
 #     # Reconstruct the callback URL properly

@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     REDIS_HOST: str
     REDIS_PORT: int
+    REDIS_USER: str | None = None
+    REDIS_PASSWORD: SecretStr | None = None
 
     POSTGRES_HOST: str
     POSTGRES_PORT: int
@@ -52,10 +54,16 @@ class Settings(BaseSettings):
         
     @property
     def redis_connection_string(self) -> str:
+        if self.ENVIRONMENT == "production" and self.REDIS_USER and self.REDIS_PASSWORD:
+            password = quote_plus(self.REDIS_PASSWORD.get_secret_value())
+            return f"redis://{self.REDIS_USER}:{password}@{self.REDIS_HOST}:{self.REDIS_PORT}"
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
 
     @model_validator(mode='after')
     def validate_settings(self) -> 'Settings':
+        if self.ENVIRONMENT == "production":
+            if not self.REDIS_USER or not self.REDIS_PASSWORD:
+                raise ValueError("In production, REDIS_USER and REDIS_PASSWORD must be set")
         return self
     
     @field_validator("ALLOWED_ORIGINS", mode="before")

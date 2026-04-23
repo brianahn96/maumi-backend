@@ -5,7 +5,13 @@ from app.core.config import config
 from app.deps.lifespan import lifespan
 from app.api.v1.router import api_router
 
-app = FastAPI(title="Chatbot API", lifespan=lifespan)
+app = FastAPI(
+    title="Chatbot API", 
+    lifespan=lifespan,
+    docs_url=None if config.ENVIRONMENT == "production" else "/docs",
+    redoc_url=None if config.ENVIRONMENT == "production" else "/redoc",
+    openapi_url=None if config.ENVIRONMENT == "production" else "/openapi.json",
+)
 
 app.add_middleware(
     CORSMiddleware,

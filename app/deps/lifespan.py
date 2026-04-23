@@ -12,12 +12,15 @@ async def lifespan(app: FastAPI):
     )
     
     app.state.redis_manager = RedisManager(
-        url=config.redis_connection_string
+        url=config.redis_connection_string,
+        is_production=config.ENVIRONMENT == "production"
     )
     
     await app.state.redis_manager.connect(db=RedisDB.DEFAULT)
-    await app.state.redis_manager.connect(db=RedisDB.AUTH)
-    await app.state.redis_manager.connect(db=RedisDB.CACHE)
+    
+    if config.ENVIRONMENT != "production":
+        await app.state.redis_manager.connect(db=RedisDB.AUTH)
+        await app.state.redis_manager.connect(db=RedisDB.CACHE)
     
     app.state.db_manager.connect()
     

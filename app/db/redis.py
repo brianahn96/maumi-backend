@@ -10,6 +10,7 @@ class RedisDB(Enum):
 @dataclass
 class RedisManager:
     url: str
+    is_production: bool = False
 
     _clients: dict[RedisDB, redis.Redis] = field(
         init=False,
@@ -18,9 +19,10 @@ class RedisManager:
 
     def connect(self, db: RedisDB = RedisDB.DEFAULT) -> redis.Redis:
         if db not in self._clients:
+            db_number = 0 if self.is_production else db.value
             self._clients[db] = redis.from_url(
                 self.url,
-                db=db.value,
+                db=db_number,
                 max_connections=20,
                 decode_responses=True,
             )

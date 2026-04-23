@@ -274,7 +274,7 @@ async def login(
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
         secure=is_secure,  # Set to True in production
-        samesite="strict",
+        samesite="none",
         path="/"
     )
 
@@ -370,7 +370,7 @@ async def refresh_token(
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
         secure=is_secure,  # Set to True in production
-        samesite="strict",
+        samesite="none",
         path="/"
     )
 
@@ -408,7 +408,7 @@ async def logout(
     response.delete_cookie(
         key="refresh_token",
         path="/",
-        samesite="strict"
+        samesite="none"
     )
 
     return response
@@ -598,7 +598,7 @@ async def logout(
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
 #             secure=is_secure,  # Set to True in production
-#             samesite="strict",
+#             samesite="none",
 #             path="/"
 #         )
 
@@ -669,7 +669,7 @@ async def logout(
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
 #             secure=is_secure,  # Set to True in production
-#             samesite="strict",
+#             samesite="none",
 #             path="/"
 #         )
 

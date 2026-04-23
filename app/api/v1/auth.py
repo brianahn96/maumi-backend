@@ -29,6 +29,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 REDIS_DB = 1 if config.ENVIRONMENT == "production" else 0
+DOMAIN = ".vercel.app" if config.ENVIRONMENT == "production" else None
 
 # OAuth2 Configuration
 # GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID.get_secret_value()
@@ -272,9 +273,11 @@ async def login(
         key="refresh_token",
         value=refresh_token,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        expires=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
+        domain=DOMAIN,
         secure=is_secure,  # Set to True in production
-        samesite="none",
+        samesite="lax",
         path="/"
     )
 
@@ -368,9 +371,11 @@ async def refresh_token(
         key="refresh_token",
         value=new_refresh_token,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        expires=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
+        domain=DOMAIN,
         secure=is_secure,  # Set to True in production
-        samesite="none",
+        samesite="lax",
         path="/"
     )
 
@@ -404,11 +409,16 @@ async def logout(
         content={"detail": "Logged out successfully"},
         status_code=status.HTTP_200_OK
     )
-
+    
+    is_secure = ENVIRONMENT == "production"
+    
     response.delete_cookie(
         key="refresh_token",
         path="/",
-        samesite="none"
+        samesite="lax",
+        domain=DOMAIN,
+        secure=is_secure,
+        httponly=True,
     )
 
     return response
@@ -598,7 +608,7 @@ async def logout(
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
 #             secure=is_secure,  # Set to True in production
-#             samesite="none",
+#             samesite="lax",
 #             path="/"
 #         )
 
@@ -669,7 +679,7 @@ async def logout(
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
 #             secure=is_secure,  # Set to True in production
-#             samesite="none",
+#             samesite="lax",
 #             path="/"
 #         )
 

@@ -14,7 +14,7 @@ class ChatState(TypedDict):
 
 
 # Primary LLM (Groq)
-groq_llm = ChatOpenAI(
+groq_fallback = ChatOpenAI(
     model="llama-3.3-70b-versatile",
     openai_api_key=config.GROQ_API_KEY.get_secret_value(),
     openai_api_base="https://api.groq.com/openai/v1",
@@ -30,14 +30,14 @@ mistral_fallback = ChatMistralAI(
 )
 
 # Fallback 2: Cohere (Direct)
-cohere_fallback = ChatCohere(
+cohere_llm = ChatCohere(
     model="command-a-03-2025",
     cohere_api_key=config.COHERE_API_KEY.get_secret_value(),
     max_tokens=1024,
 )
 
 # Chain with fallbacks
-llm = groq_llm.with_fallbacks([mistral_fallback, cohere_fallback])
+llm = cohere_llm.with_fallbacks([mistral_fallback, groq_fallback])
 
 SYSTEM_PROMPT = """당신은 친절하고 유능한 AI 어시스턴트입니다.
 사용자의 질문에 명확하고 도움이 되는 답변을 제공합니다.

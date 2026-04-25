@@ -29,6 +29,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 REDIS_DB = 1 if config.ENVIRONMENT == "production" else 0
+SAMESITE = "none" if ENVIRONMENT == "production" else "lax"
+
 
 # OAuth2 Configuration
 # GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID.get_secret_value()
@@ -274,7 +276,7 @@ async def login(
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
         secure=is_secure,  # Set to True in production
-        samesite="lax",
+        samesite=SAMESITE,
         path="/"
     )
 
@@ -370,7 +372,7 @@ async def refresh_token(
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
         secure=is_secure,  # Set to True in production
-        samesite="lax",
+        samesite=SAMESITE,
         path="/"
     )
 
@@ -408,7 +410,7 @@ async def logout(
     response.delete_cookie(
         key="refresh_token",
         path="/",
-        samesite="lax"
+        samesite=SAMESITE
     )
 
     return response

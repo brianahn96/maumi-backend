@@ -19,7 +19,7 @@ class RedisManager:
 
     def connect(self, db: RedisDB = RedisDB.DEFAULT) -> redis.Redis:
         if db not in self._clients:
-            db_number = 0 if self.is_production else db.value
+            db_number = 0 if self.is_production else db
             self._clients[db] = redis.from_url(
                 self.url,
                 db=db_number,

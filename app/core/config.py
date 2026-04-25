@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     # GOOGLE_API_KEY: SecretStr
     # GOOGLE_EMBEDDING_MODEL: str
     GROQ_API_KEY: SecretStr
-    OPENROUTER_API_KEY: SecretStr
+    MISTRAL_API_KEY: SecretStr
+    COHERE_API_KEY: SecretStr
     
     SECRET_KEY: SecretStr
 

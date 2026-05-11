@@ -18,7 +18,6 @@ import redis.asyncio as redis
 
 from app.deps.dependencies import get_db, get_redis_manager
 from app.db.models import User, AuthProvider
-from app.db.redis import RedisDB
 from app.core.config import config
 from app.schemas.authentication import UserRegister, UserLogin, AccessTokenResponse, UserResponse, RefreshTokenRequest
 
@@ -27,10 +26,11 @@ ENVIRONMENT = config.ENVIRONMENT
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+LOGIN_ATTEMPT_WINDOW = 300  # 5 minutes
+MAX_LOGIN_ATTEMPTS = 5
 
-REDIS_DB = 1 if config.ENVIRONMENT == "production" else 0
 SAMESITE = "none" if ENVIRONMENT == "production" else "lax"
-
+IS_SEURE = ENVIRONMENT == "production"
 
 # OAuth2 Configuration
 # GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID.get_secret_value()
@@ -45,8 +45,6 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
-LOGIN_ATTEMPT_WINDOW = 300  # 5 minutes
-MAX_LOGIN_ATTEMPTS = 5
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -89,8 +87,6 @@ def verify_token(token: str, token_type: str, redis: redis.Redis = None) -> dict
 
         # Check if token is blacklisted (if redis is provided)
         if redis and "jti" in payload:
-            token_jti = payload["jti"]
-            # We'll check blacklisting in the calling function since it's async
             pass
 
         return payload
@@ -122,7 +118,7 @@ async def check_rate_limit(username: str, redis: redis.Redis) -> bool:
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
+    redis: redis.Redis = Depends(get_redis_manager())
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -211,7 +207,7 @@ async def me(
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
-    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
+    redis: redis.Redis = Depends(get_redis_manager())
 ):
 
     result = await db.execute(
@@ -265,17 +261,12 @@ async def login(
         status_code=status.HTTP_200_OK
     )
 
-    
-    # Set secure=True if running in production (behind HTTPS)
-    # For development, you can set this based on environment
-    is_secure = ENVIRONMENT == "production"
-
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
-        secure=is_secure,  # Set to True in production
+        secure=IS_SEURE,  # Set to True in production
         samesite=SAMESITE,
         path="/"
     )
@@ -285,7 +276,7 @@ async def login(
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh_token(
     refresh_token: str = Cookie(None),
-    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB)),
+    redis: redis.Redis = Depends(get_redis_manager()),
 ):
     if not refresh_token:
         raise HTTPException(
@@ -362,16 +353,13 @@ async def refresh_token(
         },
         status_code=status.HTTP_200_OK
     )
-    
-    # Set secure=True if running in production (behind HTTPS)
-    is_secure = ENVIRONMENT == "production"
 
     response.set_cookie(
         key="refresh_token",
         value=new_refresh_token,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
-        secure=is_secure,  # Set to True in production
+        secure=IS_SEURE,  # Set to True in production
         samesite=SAMESITE,
         path="/"
     )
@@ -382,7 +370,7 @@ async def refresh_token(
 async def logout(
     token: str = Depends(oauth2_scheme),
     user: User = Depends(get_current_user),
-    redis: redis.Redis = Depends(get_redis_manager(REDIS_DB)),
+    redis: redis.Redis = Depends(get_redis_manager()),
 ):
     # Get the token payload to extract jti for blacklisting
     try:
@@ -591,16 +579,13 @@ async def logout(
 #             status_code=status.HTTP_200_OK
 #         )
 
-#         # Set secure=True if running in production (behind HTTPS)
-#         is_secure = ENVIRONMENT == "production"
-
 #         response.set_cookie(
 #             key="refresh_token",
 #             value=jwt_refresh,
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
-#             secure=is_secure,  # Set to True in production
-#             samesite="none",
+#             secure=IS_SECURE,  # Set to True in production
+#             samesite=SAMESITE,
 #             path="/"
 #         )
 
@@ -662,16 +647,13 @@ async def logout(
 #             status_code=status.HTTP_200_OK
 #         )
 
-#         # Set secure=True if running in production (behind HTTPS)
-#         is_secure = ENVIRONMENT == "production"
-
 #         response.set_cookie(
 #             key="refresh_token",
 #             value=jwt_refresh,
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
-#             secure=is_secure,  # Set to True in production
-#             samesite="none",
+#             secure=IS_SECURE,  # Set to True in production
+#             samesite=SAMESITE,
 #             path="/"
 #         )
 

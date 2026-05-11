@@ -9,8 +9,8 @@ from fastapi.responses import StreamingResponse
 from app.deps.dependencies import get_db
 from app.api.v1.auth import get_current_user
 from app.schemas.chat import MessageResponse, ChatRequest
-from app.db.models import MessageModel, SessionModel, MessageRole
-from app.graphs.chatbot_chain import chat_graph
+from app.db.models import MessageModel, SessionModel, MessageRole, User
+from app.services.chatbot_chain import chat_graph
 
 class ChatService:
     def __init__(self, db: AsyncSession):
@@ -20,6 +20,17 @@ class ChatService:
         query = select(MessageModel).where(MessageModel.session_id == session_id).order_by(MessageModel.created_at)
         result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def get_recent_messages(self, session_id: UUID, limit: int = 5) -> list[MessageModel]:
+        query = (
+            select(MessageModel)
+            .where(MessageModel.session_id == session_id)
+            .order_by(MessageModel.created_at.desc())
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        messages = list(result.scalars().all())
+        return messages[::-1]
 
     async def save_message(self, session_id: UUID, role: MessageRole, content: str):
         message = MessageModel(session_id=session_id, role=role, content=content)
@@ -59,10 +70,17 @@ async def generate_chat(
 ):
     chat_service = ChatService(db)
     
+    config = {"configurable": {"thread_id": str(session_id)}}
+    
+    recent_messages = await chat_service.get_recent_messages(session_id, limit=5)
+    
+    messages = [(msg.role.value, msg.content) for msg in recent_messages]
+    
+    messages.append(("user", payload.message))
+
     await chat_service.save_message(session_id, MessageRole.user, payload.message)
     
-    config = {"configurable": {"thread_id": str(session_id)}}
-    result = await chat_graph.ainvoke({"messages": [("user", payload.message)], "session_id": str(session_id)}, config)
+    result = await chat_graph.ainvoke({"messages": messages, "session_id": str(session_id)}, config)
     
     await chat_service.save_message(session_id, MessageRole.assistant, result["messages"][-1].content)
     
@@ -81,8 +99,12 @@ async def stream_chat(
         config = {"configurable": {"thread_id": str(session_id)}}
 
         try:
+            recent_messages = await chat_service.get_recent_messages(session_id, limit=5)
+            messages = [(msg.role.value, msg.content) for msg in recent_messages]
+            messages.append(("user", payload.message))
+
             async for event in chat_graph.astream_events(
-                {"messages": [("user", payload.message)], "session_id": str(session_id)},
+                {"messages": messages, "session_id": str(session_id)},
                 config,
                 version="v2"
             ):

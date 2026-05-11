@@ -6,7 +6,7 @@ from app.deps.lifespan import lifespan
 from app.api.v1.router import api_router
 
 app = FastAPI(
-    title="Chatbot API", 
+    title="Chatbot API",
     lifespan=lifespan,
     docs_url=None if config.ENVIRONMENT == "production" else "/docs",
     redoc_url=None if config.ENVIRONMENT == "production" else "/redoc",

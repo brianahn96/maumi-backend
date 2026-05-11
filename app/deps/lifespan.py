@@ -3,7 +3,7 @@ from fastapi import FastAPI
 
 from app.db.database import PostgresManager
 from app.core.config import config
-from app.db.redis import RedisManager, RedisDB
+from app.db.redis import RedisManager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,11 +16,7 @@ async def lifespan(app: FastAPI):
         is_production=config.ENVIRONMENT == "production"
     )
     
-    await app.state.redis_manager.connect(db=RedisDB.DEFAULT)
-    
-    if config.ENVIRONMENT != "production":
-        await app.state.redis_manager.connect(db=RedisDB.AUTH)
-        await app.state.redis_manager.connect(db=RedisDB.CACHE)
+    await app.state.redis_manager.connect()
     
     app.state.db_manager.connect()
     

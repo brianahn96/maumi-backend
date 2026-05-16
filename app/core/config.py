@@ -28,8 +28,13 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: SecretStr
     POSTGRES_DB: str
+    
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: SecretStr
 
     ENVIRONMENT: str = "development"
+
+    FRONTEND_URL: str
 
     ALLOWED_ORIGINS: str | list[str] = []
 

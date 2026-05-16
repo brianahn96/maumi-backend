@@ -30,11 +30,11 @@ LOGIN_ATTEMPT_WINDOW = 300  # 5 minutes
 MAX_LOGIN_ATTEMPTS = 5
 
 SAMESITE = "none" if ENVIRONMENT == "production" else "lax"
-IS_SEURE = ENVIRONMENT == "production"
+IS_SECURE = ENVIRONMENT == "production"
 
 # OAuth2 Configuration
-# GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID.get_secret_value()
-# GOOGLE_CLIENT_SECRET = config.GOOGLE_CLIENT_SECRET.get_secret_value()
+GOOGLE_CLIENT_ID = config.GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET = config.GOOGLE_CLIENT_SECRET.get_secret_value()
 # NAVER_CLIENT_ID = config.NAVER_CLIENT_ID.get_secret_value()
 # NAVER_CLIENT_SECRET = config.NAVER_CLIENT_SECRET.get_secret_value()
 
@@ -266,7 +266,7 @@ async def login(
         value=refresh_token,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
-        secure=IS_SEURE,  # Set to True in production
+        secure=IS_SECURE,  # Set to True in production
         samesite=SAMESITE,
         path="/"
     )
@@ -359,7 +359,7 @@ async def refresh_token(
         value=new_refresh_token,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         httponly=True,
-        secure=IS_SEURE,  # Set to True in production
+        secure=IS_SECURE,  # Set to True in production
         samesite=SAMESITE,
         path="/"
     )
@@ -403,21 +403,21 @@ async def logout(
 
     return response
 
-# async def get_google_user_info(access_token: str) -> dict:
-#     """Get user info from Google"""
-#     async with httpx.AsyncClient() as client:
-#         response = await client.get(
-#             'https://www.googleapis.com/oauth2/v2/userinfo',
-#             headers={'Authorization': f'Bearer {access_token}'}
-#         )
-#         response.raise_for_status()
-#         data = response.json()
-#         return {
-#             'id': data.get('id'),
-#             'email': data.get('email'),
-#             'name': data.get('name'),
-#             'picture': data.get('picture')
-#         }
+async def get_google_user_info(access_token: str) -> dict:
+    """Get user info from Google"""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            'https://www.googleapis.com/oauth2/v2/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'}
+        )
+        response.raise_for_status()
+        data = response.json()
+        return {
+            'id': data.get('id'),
+            'email': data.get('email'),
+            'name': data.get('name'),
+            'picture': data.get('picture')
+        }
 
 # async def get_naver_user_info(access_token: str) -> dict:
 #     """Get user info from Naver"""
@@ -437,93 +437,93 @@ async def logout(
 #             'picture': user_info.get('profile_image')
 #         }
 
-# async def exchange_oauth_code(provider: str, code: str, redirect_uri: str) -> dict:
-#     """Exchange authorization code for access token"""
-#     async with httpx.AsyncClient() as client:
-#         if provider == 'google':
-#             response = await client.post(
-#                 'https://oauth2.googleapis.com/token',
-#                 data={
-#                     'code': code,
-#                     'client_id': GOOGLE_CLIENT_ID,
-#                     'client_secret': GOOGLE_CLIENT_SECRET,
-#                     'redirect_uri': redirect_uri,
-#                     'grant_type': 'authorization_code'
-#                 }
-#             )
-#         elif provider == 'naver':
-#             response = await client.post(
-#                 'https://nid.naver.com/oauth2.0/token',
-#                 data={
-#                     'code': code,
-#                     'client_id': NAVER_CLIENT_ID,
-#                     'client_secret': NAVER_CLIENT_SECRET,
-#                     'redirect_uri': redirect_uri,
-#                     'grant_type': 'authorization_code',
-#                     'state': 'STATE_STRING'
-#                 }
-#             )
-#         else:
-#             raise HTTPException(status_code=400, detail="Invalid provider")
+async def exchange_oauth_code(provider: str, code: str, redirect_uri: str) -> dict:
+    """Exchange authorization code for access token"""
+    async with httpx.AsyncClient() as client:
+        if provider == 'google':
+            response = await client.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'code': code,
+                    'client_id': GOOGLE_CLIENT_ID,
+                    'client_secret': GOOGLE_CLIENT_SECRET,
+                    'redirect_uri': redirect_uri,
+                    'grant_type': 'authorization_code'
+                }
+            )
+        elif provider == 'naver':
+            response = await client.post(
+                'https://nid.naver.com/oauth2.0/token',
+                data={
+                    'code': code,
+                    'client_id': NAVER_CLIENT_ID,
+                    'client_secret': NAVER_CLIENT_SECRET,
+                    'redirect_uri': redirect_uri,
+                    'grant_type': 'authorization_code',
+                    'state': 'STATE_STRING'
+                }
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid provider")
 
-#         response.raise_for_status()
-#         return response.json()
+        response.raise_for_status()
+        return response.json()
 
-# async def get_or_create_oauth_user(
-#     db: AsyncSession,
-#     provider: str,
-#     user_info: dict
-# ) -> User:
-#     """Get or create user from OAuth provider"""
-#     provider_id = str(user_info.get('id'))
-#     email = user_info.get('email')
-#     name = user_info.get('name') or user_info.get('email', '').split('@')[0]  # Fallback to email prefix for name
-#     avatar_url = user_info.get('picture')
+async def get_or_create_oauth_user(
+    db: AsyncSession,
+    provider: str,
+    user_info: dict
+) -> User:
+    """Get or create user from OAuth provider"""
+    provider_id = str(user_info.get('id'))
+    email = user_info.get('email')
+    name = user_info.get('name') or user_info.get('email', '').split('@')[0]  # Fallback to email prefix for name
+    avatar_url = user_info.get('picture')
 
-#     # Check if user already exists with this provider ID
-#     result = await db.execute(
-#         select(User).where(
-#             (User.provider == AuthProvider[provider]) &
-#             (User.provider_user_id == provider_id)
-#         )
-#     )
-#     user = result.scalar_one_or_none()
+    # Check if user already exists with this provider ID
+    result = await db.execute(
+        select(User).where(
+            (User.provider == AuthProvider[provider]) &
+            (User.provider_user_id == provider_id)
+        )
+    )
+    user = result.scalar_one_or_none()
 
-#     if not user:
-#         # Check if user exists with this email (for linking accounts)
-#         result = await db.execute(
-#             select(User).where(User.email == email)
-#         )
-#         user = result.scalar_one_or_none()
+    if not user:
+        # Check if user exists with this email (for linking accounts)
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
 
-#         if not user:
-#             # Create new user
-#             user = User(
-#                 email=email,
-#                 username=name,
-#                 provider=AuthProvider[provider],
-#                 provider_user_id=provider_id,
-#                 avatar_url=avatar_url
-#             )
-#             db.add(user)
-#         else:
-#             # Update existing user with OAuth provider info
-#             user.provider = AuthProvider[provider]
-#             user.provider_user_id = provider_id
+        if not user:
+            # Create new user
+            user = User(
+                email=email,
+                username=name,
+                provider=AuthProvider[provider],
+                provider_user_id=provider_id,
+                avatar_url=avatar_url
+            )
+            db.add(user)
+        else:
+            # Update existing user with OAuth provider info
+            user.provider = AuthProvider[provider]
+            user.provider_user_id = provider_id
 
-#     # Update user info from OAuth
-#     user.username = name
-#     user.avatar_url = avatar_url
-#     user.is_active = True
+    # Update user info from OAuth
+    user.username = name
+    user.avatar_url = avatar_url
+    user.is_active = True
 
-#     # Only update last_login_at if we have a current time
-#     from datetime import datetime, timezone
-#     user.last_login_at = datetime.now(timezone.utc)
+    # Only update last_login_at if we have a current time
+    from datetime import datetime, timezone
+    user.last_login_at = datetime.now(timezone.utc)
 
-#     await db.commit()
-#     await db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
 
-#     return user
+    return user
 
 # @router.get("/naver")
 # async def naver_login(request: Request):
@@ -584,7 +584,7 @@ async def logout(
 #             value=jwt_refresh,
 #             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
 #             httponly=True,
-#             secure=IS_SECURE,  # Set to True in production
+# Set to True in production
 #             samesite=SAMESITE,
 #             path="/"
 #         )
@@ -593,72 +593,64 @@ async def logout(
 #     except Exception as e:
 #         raise HTTPException(status_code=400, detail=f"Naver OAuth error: {str(e)}")
 
-# @router.get("/google")
-# async def google_login(request: Request):
-#     """Redirect to Google OAuth consent screen"""
-#     redirect_uri = str(request.url_for('google_callback'))
-#     params = {
-#         'client_id': GOOGLE_CLIENT_ID,
-#         'redirect_uri': redirect_uri,
-#         'response_type': 'code',
-#         'scope': 'openid email profile',
-#         'access_type': 'offline'
-#     }
-#     return RedirectResponse(url=f'https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}')
+@router.get("/google")
+async def google_login(request: Request):
+    """Redirect to Google OAuth consent screen"""
+    redirect_uri = str(request.url_for('google_callback'))
+    params = {
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'access_type': 'offline'
+    }
+    return RedirectResponse(url=f'https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}')
 
-# @router.get("/google/callback")
-# async def google_callback(
-#     code: str,
-#     request: Request,
-#     db: AsyncSession = Depends(get_db),
-#     redis: redis.Redis = Depends(get_redis_manager(REDIS_DB))
-# ):
-#     """Handle Google OAuth callback"""
-#     # Reconstruct the callback URL properly
-#     redirect_uri = f"{request.url.scheme}://{request.url.netloc}{request.url.path}"
-#     try:
-#         token_data = await exchange_oauth_code('google', code, redirect_uri)
-#         access_token = token_data.get('access_token')
+@router.get("/google/callback")
+async def google_callback(
+    code: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    redis: redis.Redis = Depends(get_redis_manager())
+):
+    """Handle Google OAuth callback"""
+    # Reconstruct the callback URL properly
+    redirect_uri = f"{request.url.scheme}://{request.url.netloc}{request.url.path}"
+    try:
+        token_data = await exchange_oauth_code('google', code, redirect_uri)
+        access_token = token_data.get('access_token')
 
-#         user_info = await get_google_user_info(access_token)
-#         user = await get_or_create_oauth_user(db, 'google', user_info)
+        user_info = await get_google_user_info(access_token)
+        user = await get_or_create_oauth_user(db, 'google', user_info)
 
-#         jwt_access = create_access_token(user_id=str(user.id), email=user.email)
-#         jwt_refresh = create_refresh_token(user_id=str(user.id), email=user.email)
+        jwt_refresh = create_refresh_token(user_id=str(user.id), email=user.email)
 
-#         # Store refresh token in Redis
-#         try:
-#             await redis.setex(
-#                 name=f"refresh_token:{user.id}",
-#                 time=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
-#                 value=jwt_refresh
-#             )
-#         except Exception as e:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="Could not store session"
-#             )
+        # Store refresh token in Redis
+        try:
+            await redis.setex(
+                name=f"refresh_token:{user.id}",
+                time=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+                value=jwt_refresh
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not store session"
+            )
 
-#         response = JSONResponse(
-#             content={
-#                 "access_token": jwt_access,
-#                 "token_type": "bearer"
-#             },
-#             status_code=status.HTTP_200_OK
-#         )
+        response = RedirectResponse(url=config.FRONTEND_URL)
+        response.set_cookie(
+            key="refresh_token",
+            value=jwt_refresh,
+            max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+            httponly=True,
+            secure=True,
+            samesite=SAMESITE,
+            path="/"
+        )
 
-#         response.set_cookie(
-#             key="refresh_token",
-#             value=jwt_refresh,
-#             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-#             httponly=True,
-#             secure=IS_SECURE,  # Set to True in production
-#             samesite=SAMESITE,
-#             path="/"
-#         )
-
-#         return response
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Google OAuth error: {str(e)}")
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Google OAuth error: {str(e)}")
 
 
